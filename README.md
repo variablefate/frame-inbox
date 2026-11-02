@@ -139,17 +139,19 @@ Three things that will bite you before they show:
 
 ## Uninstall
 
+Right-click **Frame Inbox** in the application menu → **Uninstall Frame Inbox…** (trash icon). A dialog lists exactly what will go, then confirms when it is done.
+
+You will see a second item there, *Uninstall or manage add-ons* with the Discover logo. Plasma generates that for every application and resolves it to a package lookup; this app owns no package, so it does nothing. Ours is the one with the trash icon.
+
+The desktop icon is just a shortcut file — right-click → *Move to Trash* removes the launcher and leaves the app installed, so use the menu action instead.
+
+From a terminal, or on a headless install:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/variablefate/frame-inbox/main/uninstall.sh | bash
 ```
 
-It lists everything it will remove, then asks: the server, launchers, menu and desktop entries, icons, the ntfy topic, and a FrameDrop sideload in `~/devkit-game` with its Steam entry. `--dry-run` lists only; `--keep-data` keeps your links.
-
-From the application menu: right-click **Frame Inbox → Uninstall Frame Inbox…** (trash icon). It shows a dialog listing exactly what will go before doing anything.
-
-You will see a second item there, *Uninstall or manage add-ons* with the Discover logo. Plasma generates that for every application and resolves it to a package lookup; this app owns no package, so it does nothing. Ours is the one with the trash icon.
-
-The desktop icon is just a shortcut file — right-click → *Move to Trash* removes the launcher and leaves the app installed. Uninstall from the app menu, or with the one-liner above.
+It removes the server, launchers, menu and desktop entries, icons, the ntfy topic, and a FrameDrop sideload in `~/devkit-game` with its Steam entry. `--dry-run` lists only; `--keep-data` keeps your links.
 
 ## License
 
