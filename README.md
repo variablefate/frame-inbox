@@ -39,7 +39,7 @@ Only useful if you have a Windows PC — FrameDrop's client is Windows-only, and
 
 **Why it lands in your Steam library:** that is the only thing FrameDrop knows how to do — it registers the app as a *Devkit Game* and adds a shortcut. It is a poor fit for a desktop utility: launched from the library it runs under Gaming Mode, where the panel's minimize-to-taskbar has nowhere to go. Treat it as the no-terminal way onto the machine, then use it from Desktop Mode. The one-liner above is the better path. If you do launch that shortcut from Gaming Mode, the first run installs the app where it belongs — app menu and Desktop — and says so, instead of opening a panel with no taskbar to minimise into.
 
-The bundle's sha256 is `c8a35cad3d2a8a49c2f6a3fb3db12459255a47818c5b2335b3767c03d722dfa3`, also pinned in [`framedrop.json`](framedrop.json).
+The bundle's sha256 is `cd5e7a5ec92a52edcb8e7e345515e62cbc95cf0eea49be42f67404a5db7afab6`, also pinned in [`framedrop.json`](framedrop.json).
 
 ### Then, either way
 
@@ -152,7 +152,11 @@ curl -fsSL https://raw.githubusercontent.com/variablefate/frame-inbox/main/unins
 
 It lists everything it will remove, then asks: the server, launchers, menu and desktop entries, icons, the ntfy topic, and a FrameDrop sideload in `~/devkit-game` with its Steam entry. `--dry-run` lists only; `--keep-data` keeps your links.
 
-From the app menu: right-click **Frame Inbox → Uninstall Frame Inbox…** opens a terminal with the same prompt.
+From the application menu: right-click **Frame Inbox → Remove Frame Inbox (app and links)…** (trash icon). It shows a dialog listing exactly what will go before doing anything.
+
+**You will see a second, useless item there.** Plasma generates *Uninstall or manage add-ons* (the Discover icon) for every application; it resolves to a package lookup, and this app owns no package, so it does nothing at all. Ours is the one with the trash icon.
+
+**The desktop icon is just a shortcut file.** Right-click → *Move to Trash* removes the launcher and leaves the app installed. Uninstall from the app menu, or with the one-liner above.
 
 **There is no Discover page.** Discover only offers *Uninstall / Manage Add-ons* for things it installed itself — packages or Flatpaks. This app lives in your home directory with no package backend, so there is nothing for Discover to remove. The desktop action is the supported equivalent; a Flatpak build would be the only way to get the Discover entry.
 

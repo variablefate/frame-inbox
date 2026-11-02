@@ -1,48 +1,76 @@
 #!/usr/bin/env bash
-# Opened from the app menu's right-click "Uninstall Frame Inbox…" action.
-# Gives the uninstaller a terminal so the user sees what it will remove and can
-# answer the prompt; falls back to a dialog if no terminal is available.
-set -euo pipefail
+# Right-click "Remove Frame Inbox (app and links)…" in the application menu.
+#
+# Uses a KDE dialog by default (no terminal needed, and it shows exactly what
+# will be deleted). Falls back to a terminal, then to a plain message.
+set -uo pipefail
+
+# Menus launch with a thinner PATH than a login shell; /usr/sbin may be absent.
+PATH="/usr/local/bin:/usr/bin:/usr/sbin:/bin:/sbin:${PATH:-}"
+export PATH
 
 BASE="${FRAME_INBOX_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/frame-inbox}"
 SCRIPT="$BASE/uninstall.sh"
+LOG="${XDG_CACHE_HOME:-$HOME/.cache}/frame-inbox-uninstall.log"
+mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
 
-if [ ! -f "$SCRIPT" ]; then
-  echo "No uninstaller at $SCRIPT" >&2
+has_display() { [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; }
+
+notify_error() {
+  echo "[$(date -Is)] $1" >>"$LOG"
+  if has_display; then
+    if command -v kdialog >/dev/null 2>&1; then
+      kdialog --title "Frame Inbox" --error "$1" 2>/dev/null && return
+    elif command -v zenity >/dev/null 2>&1; then
+      zenity --error --text "$1" 2>/dev/null && return
+    fi
+  fi
+  echo "$1" >&2
+}
+
+[ -f "$SCRIPT" ] || { notify_error "No uninstaller at $SCRIPT."; exit 1; }
+
+if ! has_display; then
+  notify_error "No display available - open a terminal and run: bash $SCRIPT"
   exit 1
 fi
 
-# This is launched from a menu, so there is normally a display. Without one even
-# the terminal emulators abort on startup, so fail with a usable message.
-if [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
-  echo "No display available - open a terminal and run: bash $SCRIPT" >&2
-  exit 1
+preview="$(bash "$SCRIPT" --dry-run 2>&1)"
+echo "[$(date -Is)] --- run ---" >>"$LOG"
+printf '%s\n' "$preview" >>"$LOG"
+
+# KDE first: a dialog is what a menu action should produce.
+if command -v kdialog >/dev/null 2>&1; then
+  if kdialog --title "Remove Frame Inbox" --icon edit-delete \
+       --yesno "${preview}"$'\n\n'"Remove all of this?"; then
+    if bash "$SCRIPT" --yes >>"$LOG" 2>&1; then
+      kdialog --title "Frame Inbox" --msgbox "Frame Inbox has been removed."
+    else
+      notify_error "Removal failed or was incomplete. Details: $LOG"
+    fi
+  fi
+  exit 0
+fi
+
+if command -v zenity >/dev/null 2>&1; then
+  if zenity --question --title "Remove Frame Inbox" --text "$preview"; then
+    bash "$SCRIPT" --yes >>"$LOG" 2>&1 \
+      && zenity --info --text "Frame Inbox has been removed." \
+      || notify_error "Removal failed. Details: $LOG"
+  fi
+  exit 0
 fi
 
 for term in konsole x-terminal-emulator xfce4-terminal gnome-terminal xterm; do
   command -v "$term" >/dev/null 2>&1 || continue
   case "$term" in
-    konsole)           exec konsole --hold -e bash "$SCRIPT" ;;
+    konsole)             exec konsole --hold -e bash "$SCRIPT" ;;
     x-terminal-emulator) exec x-terminal-emulator -e bash "$SCRIPT" ;;
-    xfce4-terminal)    exec xfce4-terminal --hold -x bash "$SCRIPT" ;;
-    gnome-terminal)    exec gnome-terminal -- bash -c "bash '$SCRIPT'; printf '\nPress Enter to close…'; read -r _" ;;
-    xterm)             exec xterm -e bash -c "bash '$SCRIPT'; printf '\nPress Enter to close…'; read -r _" ;;
+    xfce4-terminal)      exec xfce4-terminal --hold -x bash "$SCRIPT" ;;
+    gnome-terminal)      exec gnome-terminal -- bash -c "bash '$SCRIPT'; read -r _" ;;
+    xterm)               exec xterm -e bash -c "bash '$SCRIPT'; read -r _" ;;
   esac
 done
 
-# No terminal: ask with a dialog and run the silent path (needs a display, or
-# kdialog/zenity abort without one).
-if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
-  if command -v kdialog >/dev/null 2>&1; then
-    kdialog --title "Frame Inbox" --yesno "Remove Frame Inbox and its saved links?" \
-      && exec bash "$SCRIPT" --yes
-    exit 0
-  fi
-  if command -v zenity >/dev/null 2>&1; then
-    zenity --question --title "Frame Inbox" --text "Remove Frame Inbox and its saved links?" \
-      && exec bash "$SCRIPT" --yes
-    exit 0
-  fi
-fi
-echo "Open a terminal and run: bash $SCRIPT" >&2
+notify_error "No dialog or terminal found - run: bash $SCRIPT"
 exit 1
