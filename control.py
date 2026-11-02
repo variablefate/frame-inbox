@@ -571,8 +571,27 @@ class Panel(Gtk.Window):
         self.quit_app()
 
 
+def show_notice(text, title="Frame Inbox", seconds=45):
+    """A plain dialog for the case where someone launched us from Gaming Mode."""
+    dialog = Gtk.MessageDialog(message_type=Gtk.MessageType.INFO,
+                               buttons=Gtk.ButtonsType.OK, text=title)
+    dialog.format_secondary_text(text)
+    dialog.set_keep_above(True)
+    dialog.set_position(Gtk.WindowPosition.CENTER)
+    if seconds > 0:
+        GLib.timeout_add_seconds(seconds, lambda: (dialog.destroy(), False)[1])
+    dialog.run()
+    dialog.destroy()
+
+
 def main():
     os.umask(0o077)
+    if "--notice" in sys.argv:
+        i = sys.argv.index("--notice")
+        text = sys.argv[i + 1] if len(sys.argv) > i + 1 else "Frame Inbox is installed."
+        seconds = int(os.environ.get("FRAME_INBOX_NOTICE_SECONDS", "45"))
+        show_notice(text, seconds=seconds)
+        return
     provider = Gtk.CssProvider()
     provider.load_from_data(CSS)
     Gtk.StyleContext.add_provider_for_screen(
@@ -592,7 +611,6 @@ def main():
     if not win.health(0.3):
         win.start_server()
     Gtk.main()
-
 
 if __name__ == "__main__":
     main()

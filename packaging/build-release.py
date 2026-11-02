@@ -14,11 +14,17 @@ NAME = "frame-inbox-linux-arm64"
 ZIP = os.path.join(OUT, f"{NAME}.zip")
 
 FILES = [
+    ("install.sh", 0o755),
+    ("uninstall.sh", 0o755),
     ("server.py", 0o644),
     ("control.py", 0o644),
     ("icon.svg", 0o644),
     ("VERSION", 0o644),
     ("update.sh", 0o755),
+    ("bin/frame-inbox", 0o755),
+    ("bin/sendlink", 0o755),
+    ("bin/frame-inbox-uninstall", 0o755),
+    ("desktop/frame-inbox.desktop.in", 0o644),
     ("static/icon-192.png", 0o644),
     ("static/icon-512.png", 0o644),
     ("packaging/frame-inbox", 0o755),
@@ -29,7 +35,8 @@ os.makedirs(OUT, exist_ok=True)
 with zipfile.ZipFile(ZIP, "w", zipfile.ZIP_DEFLATED) as zf:
     for path, mode in FILES:
         full = os.path.join(SRC, path)
-        info = zipfile.ZipInfo(f"{NAME}/{os.path.basename(path)}", date_time=(2026, 1, 1, 0, 0, 0))
+        arc = os.path.basename(path) if path.startswith("packaging/") else path
+        info = zipfile.ZipInfo(f"{NAME}/{arc}", date_time=(2026, 1, 1, 0, 0, 0))
         info.compress_type = zipfile.ZIP_DEFLATED
         info.external_attr = (mode & 0xFFFF) << 16
         with open(full, "rb") as fh:

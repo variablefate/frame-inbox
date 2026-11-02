@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Opened from the app menu's right-click "Uninstall Frame Inbox…" action.
+# Gives the uninstaller a terminal so the user sees what it will remove and can
+# answer the prompt; falls back to a dialog if no terminal is available.
+set -euo pipefail
+
+BASE="${FRAME_INBOX_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/frame-inbox}"
+SCRIPT="$BASE/uninstall.sh"
+
+if [ ! -f "$SCRIPT" ]; then
+  echo "No uninstaller at $SCRIPT" >&2
+  exit 1
+fi
+
+# This is launched from a menu, so there is normally a display. Without one even
+# the terminal emulators abort on startup, so fail with a usable message.
+if [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  echo "No display available - open a terminal and run: bash $SCRIPT" >&2
+  exit 1
+fi
+
+for term in konsole x-terminal-emulator xfce4-terminal gnome-terminal xterm; do
+  command -v "$term" >/dev/null 2>&1 || continue
+  case "$term" in
+    konsole)           exec konsole --hold -e bash "$SCRIPT" ;;
+    x-terminal-emulator) exec x-terminal-emulator -e bash "$SCRIPT" ;;
+    xfce4-terminal)    exec xfce4-terminal --hold -x bash "$SCRIPT" ;;
+    gnome-terminal)    exec gnome-terminal -- bash -c "bash '$SCRIPT'; printf '\nPress Enter to close…'; read -r _" ;;
+    xterm)             exec xterm -e bash -c "bash '$SCRIPT'; printf '\nPress Enter to close…'; read -r _" ;;
+  esac
+done
+
+# No terminal: ask with a dialog and run the silent path (needs a display, or
+# kdialog/zenity abort without one).
+if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  if command -v kdialog >/dev/null 2>&1; then
+    kdialog --title "Frame Inbox" --yesno "Remove Frame Inbox and its saved links?" \
+      && exec bash "$SCRIPT" --yes
+    exit 0
+  fi
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --question --title "Frame Inbox" --text "Remove Frame Inbox and its saved links?" \
+      && exec bash "$SCRIPT" --yes
+    exit 0
+  fi
+fi
+echo "Open a terminal and run: bash $SCRIPT" >&2
+exit 1

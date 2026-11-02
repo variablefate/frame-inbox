@@ -37,9 +37,9 @@ That puts the app in `~/.local/share/frame-inbox/`, the launchers in `~/.local/b
 
 Only useful if you have a Windows PC — FrameDrop's client is Windows-only, and its install page has no fallback when opened in the headset's own browser.
 
-**Why it lands in your Steam library:** that is the only thing FrameDrop knows how to do — it registers the app as a *Devkit Game* and adds a shortcut. It is a poor fit for a desktop utility: launched from the library it runs under Gaming Mode, where the panel's minimize-to-taskbar has nowhere to go. Treat it as the no-terminal way onto the machine, then use it from Desktop Mode. The one-liner above is the better path.
+**Why it lands in your Steam library:** that is the only thing FrameDrop knows how to do — it registers the app as a *Devkit Game* and adds a shortcut. It is a poor fit for a desktop utility: launched from the library it runs under Gaming Mode, where the panel's minimize-to-taskbar has nowhere to go. Treat it as the no-terminal way onto the machine, then use it from Desktop Mode. The one-liner above is the better path. If you do launch that shortcut from Gaming Mode, the first run installs the app where it belongs — app menu and Desktop — and says so, instead of opening a panel with no taskbar to minimise into.
 
-The bundle's sha256 is `ab509e6bfbcf8ddf62162cd12a36e2b1b2af66e8f568572071a39cc641c63f50`, also pinned in [`framedrop.json`](framedrop.json).
+The bundle's sha256 is `c8a35cad3d2a8a49c2f6a3fb3db12459255a47818c5b2335b3767c03d722dfa3`, also pinned in [`framedrop.json`](framedrop.json).
 
 ### Then, either way
 
@@ -151,6 +151,10 @@ curl -fsSL https://raw.githubusercontent.com/variablefate/frame-inbox/main/unins
 ```
 
 It lists everything it will remove, then asks: the server, launchers, menu and desktop entries, icons, the ntfy topic, and a FrameDrop sideload in `~/devkit-game` with its Steam entry. `--dry-run` lists only; `--keep-data` keeps your links.
+
+From the app menu: right-click **Frame Inbox → Uninstall Frame Inbox…** opens a terminal with the same prompt.
+
+**There is no Discover page.** Discover only offers *Uninstall / Manage Add-ons* for things it installed itself — packages or Flatpaks. This app lives in your home directory with no package backend, so there is nothing for Discover to remove. The desktop action is the supported equivalent; a Flatpak build would be the only way to get the Discover entry.
 
 Removing a Steam entry goes through the devkit tools, so Steam has to be running — if it isn't, the script says so and leaves that tile for you.
 

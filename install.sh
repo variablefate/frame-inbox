@@ -28,10 +28,12 @@ install -m 755 "$SRC/control.py" "$BASE/control.py"
 install -m 644 "$SRC/icon.svg"   "$BASE/icon.svg"
 install -m 644 "$SRC/VERSION"    "$BASE/VERSION"
 install -m 755 "$SRC/update.sh"  "$BASE/update.sh"
+install -m 755 "$SRC/uninstall.sh" "$BASE/uninstall.sh"
 install -m 644 "$SRC/static/icon-192.png" "$BASE/icon-192.png"
 install -m 644 "$SRC/static/icon-512.png" "$BASE/icon-512.png"
 install -m 755 "$SRC/bin/frame-inbox" "$BIN/frame-inbox"
 install -m 755 "$SRC/bin/sendlink"    "$BIN/sendlink"
+install -m 755 "$SRC/bin/frame-inbox-uninstall" "$BIN/frame-inbox-uninstall"
 # bake in the interpreter that actually has GTK (escape sed replacement metacharacters)
 PY_ESC=$(printf '%s' "$PY" | sed 's/[&#\\]/\\&/g')
 sed -i "s#/usr/bin/python3#$PY_ESC#" "$BIN/frame-inbox"
@@ -50,7 +52,9 @@ else
   say "icon       skipped (rsvg-convert not found)"
 fi
 
-sed "s|@EXEC@|\"$BIN/frame-inbox\"|g" "$SRC/desktop/frame-inbox.desktop.in" > "$APPS/frame-inbox.desktop"
+sed -e "s|@EXEC@|\"$BIN/frame-inbox\"|g" \
+    -e "s|@UNINSTALL@|\"$BIN/frame-inbox-uninstall\"|g" \
+    "$SRC/desktop/frame-inbox.desktop.in" > "$APPS/frame-inbox.desktop"
 chmod +x "$APPS/frame-inbox.desktop"
 say "menu entry $APPS/frame-inbox.desktop"
 

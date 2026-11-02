@@ -12,6 +12,8 @@ umask 077
 REPO="variablefate/frame-inbox"
 ZIP_NAME="frame-inbox-linux-arm64.zip"
 BASE="${FRAME_INBOX_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/frame-inbox}"
+BIN="${BIN_DIR:-$HOME/.local/bin}"
+DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
 DIR=""
 CHECK=0
 
@@ -135,6 +137,22 @@ for f in server.py control.py icon.svg icon-192.png icon-512.png VERSION frame-i
   mv -f "$DIR/.$f.new" "$DIR/$f"
   echo "  updated $f"
 done
+
+# the launcher-side pieces are not code files but must not drift either
+if [ -f "$src/uninstall.sh" ]; then
+  install -m 755 "$src/uninstall.sh" "$DIR/uninstall.sh"
+fi
+if [ -f "$src/bin/frame-inbox-uninstall" ]; then
+  install -m 755 "$src/bin/frame-inbox-uninstall" "$BIN/frame-inbox-uninstall"
+fi
+if [ -f "$src/desktop/frame-inbox.desktop.in" ] && [ -f "$BIN/frame-inbox" ]; then
+  mkdir -p "$DATA/applications"
+  sed -e "s|@EXEC@|\"$BIN/frame-inbox\"|g" \
+      -e "s|@UNINSTALL@|\"$BIN/frame-inbox-uninstall\"|g" \
+      "$src/desktop/frame-inbox.desktop.in" > "$DATA/applications/frame-inbox.desktop"
+  chmod +x "$DATA/applications/frame-inbox.desktop"
+  echo "  refreshed the menu entry"
+fi
 
 echo
 echo "updated v$installed -> v$latest"

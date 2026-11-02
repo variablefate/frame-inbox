@@ -1,5 +1,29 @@
 #!/usr/bin/env bash
-# Launcher inside the FrameDrop/sideload bundle: runs from wherever it was unpacked.
+# Launcher inside the FrameDrop/sideload bundle. Steam points a library shortcut
+# at this file; it decides what that should mean.
+set -euo pipefail
+
 HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+BASE="${FRAME_INBOX_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/frame-inbox}"
 PY="${FRAME_INBOX_PYTHON:-/usr/bin/python3}"
+ENTRY="${XDG_DATA_HOME:-$HOME/.local/share}/applications/frame-inbox.desktop"
+
+# Already installed properly: run that copy, so updates and the uninstall action
+# all talk about the same files.
+if [ -f "$BASE/control.py" ] && [ -f "$ENTRY" ]; then
+  exec "$PY" "$BASE/control.py" "$@"
+fi
+
+# Launched from the Steam library with no desktop session = Gaming Mode. A Steam
+# shortcut is only how FrameDrop delivered this; the app belongs in the app menu
+# and on the desktop, where the panel has a taskbar. Install it there, then say
+# so instead of opening a window that cannot be minimised.
+if [ "${SteamClientLaunch:-0}" = "1" ] && [ -z "${XDG_CURRENT_DESKTOP:-}" ] \
+   && [ -f "$HERE/install.sh" ]; then
+  if "$HERE/install.sh" --desktop-icon >"$HERE/install.log" 2>&1; then
+    exec "$PY" "$BASE/control.py" --notice \
+      "Frame Inbox is now in your applications menu and on your Desktop. Switch to Desktop Mode and open it there - this Steam shortcut was only the delivery method."
+  fi
+fi
+
 exec "$PY" "$HERE/control.py" "$@"
