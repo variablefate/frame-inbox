@@ -57,6 +57,20 @@ installed="$(tr -d '[:space:]' < "$DIR/VERSION" 2>/dev/null || true)"
 
 json() { python3 -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
 
+refresh_menu() {
+  # Plasma caches .desktop files; without this a new or renamed menu action only
+  # appears after a re-login. kbuildsycoca lives in /usr/sbin, often off PATH.
+  for b in kbuildsycoca6 /usr/sbin/kbuildsycoca6 /usr/bin/kbuildsycoca6 \
+           kbuildsycoca5 /usr/sbin/kbuildsycoca5; do
+    if command -v "$b" >/dev/null 2>&1 || [ -x "$b" ]; then
+      "$b" --noincremental >/dev/null 2>&1 || true
+      return 0
+    fi
+  done
+  return 0
+}
+
+
 echo "installed  v$installed  ($DIR)"
 latest="$(curl -fsSL -m 20 "https://api.github.com/repos/$REPO/releases/latest" \
           | json 'd["tag_name"].lstrip("v")')" \
@@ -151,6 +165,7 @@ if [ -f "$src/desktop/frame-inbox.desktop.in" ] && [ -f "$BIN/frame-inbox" ]; th
       -e "s|@UNINSTALL@|\"$BIN/frame-inbox-uninstall\"|g" \
       "$src/desktop/frame-inbox.desktop.in" > "$DATA/applications/frame-inbox.desktop"
   chmod +x "$DATA/applications/frame-inbox.desktop"
+  refresh_menu
   echo "  refreshed the menu entry"
 fi
 

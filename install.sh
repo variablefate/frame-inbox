@@ -11,6 +11,19 @@ ICONS="$DATA/icons/hicolor"
 
 say() { printf '  %s\n' "$*"; }
 
+refresh_menu() {
+  # Plasma caches .desktop files; without this a new or renamed menu action only
+  # appears after a re-login. kbuildsycoca lives in /usr/sbin, often off PATH.
+  for b in kbuildsycoca6 /usr/sbin/kbuildsycoca6 /usr/bin/kbuildsycoca6 \
+           kbuildsycoca5 /usr/sbin/kbuildsycoca5; do
+    if command -v "$b" >/dev/null 2>&1 || [ -x "$b" ]; then
+      "$b" --noincremental >/dev/null 2>&1 || true
+      return 0
+    fi
+  done
+  return 0
+}
+
 command -v python3 >/dev/null || { echo "python3 is required" >&2; exit 1; }
 
 # find an interpreter that actually has GTK bindings - PATH's python3 may be a venv
@@ -56,6 +69,7 @@ sed -e "s|@EXEC@|\"$BIN/frame-inbox\"|g" \
     -e "s|@UNINSTALL@|\"$BIN/frame-inbox-uninstall\"|g" \
     "$SRC/desktop/frame-inbox.desktop.in" > "$APPS/frame-inbox.desktop"
 chmod +x "$APPS/frame-inbox.desktop"
+refresh_menu
 say "menu entry $APPS/frame-inbox.desktop"
 
 if [ "${1:-}" = "--desktop-icon" ] && [ -d "$HOME/Desktop" ]; then
