@@ -24,6 +24,17 @@ DRY=0
 ASSUME_YES=0
 KEEP_DATA=0
 
+refresh_menu() {
+  for b in kbuildsycoca6 /usr/sbin/kbuildsycoca6 /usr/bin/kbuildsycoca6 \
+           kbuildsycoca5 /usr/sbin/kbuildsycoca5; do
+    if command -v "$b" >/dev/null 2>&1 || [ -x "$b" ]; then
+      "$b" --noincremental >/dev/null 2>&1 || true
+      return 0
+    fi
+  done
+  return 0
+}
+
 for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY=1 ;;
@@ -44,6 +55,7 @@ targets=()
 [ -d "$BASE" ] && targets+=("$BASE")
 [ -f "$BIN/frame-inbox" ] && targets+=("$BIN/frame-inbox")
 [ -f "$BIN/sendlink" ] && targets+=("$BIN/sendlink")
+[ -f "$BIN/frame-inbox-uninstall" ] && targets+=("$BIN/frame-inbox-uninstall")
 [ -f "$APPS/frame-inbox.desktop" ] && targets+=("$APPS/frame-inbox.desktop")
 [ -L "$HOME/Desktop/frame-inbox.desktop" ] && targets+=("$HOME/Desktop/frame-inbox.desktop")
 for size in 48x48 64x64 128x128 256x256 scalable; do
@@ -53,6 +65,8 @@ for size in 48x48 64x64 128x128 256x256 scalable; do
   done
 done
 [ -d "$HOME/.config/sendlink" ] && targets+=("$HOME/.config/sendlink")
+CACHE_LOG="${XDG_CACHE_HOME:-$HOME/.cache}/frame-inbox-uninstall.log"
+[ -f "$CACHE_LOG" ] && targets+=("$CACHE_LOG")
 for d in "${sideloads[@]:-}"; do
   [ -n "$d" ] && targets+=("$d")
 done
@@ -91,6 +105,9 @@ if curl -fsS -m 2 -o /dev/null "http://127.0.0.1:${SENDLINK_PORT:-8765}/health" 
   curl -fsS -m 2 -X POST -o /dev/null "http://127.0.0.1:${SENDLINK_PORT:-8765}/shutdown" 2>/dev/null || true
   echo "stopped the running server"
 fi
+for pid in $(pgrep -f "frame-inbox/control\.py" 2>/dev/null || true); do
+  kill "$pid" 2>/dev/null || true
+done
 if [ -f "$BASE/server.pid" ]; then
   pid="$(cat "$BASE/server.pid" 2>/dev/null || true)"
   if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
@@ -121,15 +138,17 @@ if [ "$KEEP_DATA" = "1" ] && [ -d "$BASE" ]; then
 else
   rm -rf "$BASE"
 fi
-rm -f "$BIN/frame-inbox" "$BIN/sendlink" \
+rm -f "$BIN/frame-inbox" "$BIN/sendlink" "$BIN/frame-inbox-uninstall" \
       "$APPS/frame-inbox.desktop" "$HOME/Desktop/frame-inbox.desktop" \
       "$HOME/.config/sendlink/topic"
+rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/frame-inbox-uninstall.log"
 rmdir "$HOME/.config/sendlink" 2>/dev/null || true
 for size in 48x48 64x64 128x128 256x256 scalable; do
   rm -f "$ICONS/$size/apps/frame-inbox.png" "$ICONS/$size/apps/frame-inbox.svg"
 done
 command -v gtk-update-icon-cache >/dev/null 2>&1 \
   && gtk-update-icon-cache -f -t "$ICONS" >/dev/null 2>&1 || true
+refresh_menu
 
 echo
 echo "Frame Inbox removed."

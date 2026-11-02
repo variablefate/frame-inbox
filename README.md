@@ -22,7 +22,7 @@ That installs into `~/.local/share/frame-inbox/`, puts launchers in `~/.local/bi
 
 FrameDrop adds it to your Steam library, because a shortcut is the only thing it can create — and a library tile is the wrong shelf for a desktop app, since Gaming Mode has no taskbar to minimise into. Launch it from the library once and it installs the app-menu entry, then tells you to switch to Desktop Mode. The one-liner above is the better path.
 
-The bundle's sha256 is `d48a4df96db4e903384b5ab782a74ee27ed48b5bb429e4c249098e429903a83b`, also pinned in [`framedrop.json`](framedrop.json).
+The bundle's sha256 is `65affc909859c4b855aa64458f5a514b4f550c898f5840159e5dceb292733307`, also pinned in [`framedrop.json`](framedrop.json).
 
 ### First run
 
