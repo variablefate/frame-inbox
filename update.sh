@@ -124,7 +124,7 @@ src="$(find "$tmp/x" -maxdepth 2 -name VERSION -printf '%h\n' | head -1)"
 [ -n "$src" ] || { echo "release archive looks wrong (no VERSION)" >&2; exit 1; }
 
 # ---- swap the code, leave the data alone ------------------------------------
-for f in server.py control.py icon.svg VERSION frame-inbox update.sh; do
+for f in server.py control.py icon.svg icon-192.png icon-512.png VERSION frame-inbox update.sh; do
   [ -f "$src/$f" ] || continue
   # the bundle carries its own launcher; an install.sh layout keeps its launcher
   # in ~/.local/bin and should not grow a second one here

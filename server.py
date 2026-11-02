@@ -49,6 +49,12 @@ PAGE = """<!doctype html>
 <html lang="en"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#111318">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Frame Inbox">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Frame inbox</title>
 <style>
   :root { color-scheme: dark; }
@@ -439,13 +445,28 @@ def host_is_local(host_header):
 SECURITY_HEADERS = {
     # the page is one inline script and one inline stylesheet, nothing else
     "Content-Security-Policy": ("default-src 'none'; script-src 'unsafe-inline'; "
-                                "style-src 'unsafe-inline'; img-src data:; "
-                                "connect-src 'self'; base-uri 'none'; "
+                                "style-src 'unsafe-inline'; img-src 'self' data:; "
+                                "connect-src 'self'; manifest-src 'self'; base-uri 'none'; "
                                 "form-action 'none'; frame-ancestors 'none'"),
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+MANIFEST = {
+    "name": "Frame Inbox",
+    "short_name": "Inbox",
+    "description": "Links from the headset, on your phone.",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#111318",
+    "theme_color": "#111318",
+    "icons": [
+        {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    ],
 }
 
 
@@ -476,6 +497,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def _plain(self, code, text):
         self._send(code, (text + "\n").encode(), "text/plain; charset=utf-8")
+
+    def _file(self, name, ctype):
+        """Serve a bundled file by name; names are fixed, never user input."""
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
+        try:
+            with open(path, "rb") as fh:
+                data = fh.read()
+        except OSError:
+            return self._plain(404, "not found")
+        self._send(200, data, ctype)
 
     def same_origin(self):
         """Block CSRF from any page the user happens to visit.
@@ -521,6 +552,14 @@ class Handler(BaseHTTPRequestHandler):
             self._plain(200, "ok")
         elif path == "/version":
             self._plain(200, VERSION)
+        elif path == "/manifest.webmanifest":
+            self._send(200, json.dumps(MANIFEST, indent=2).encode(),
+                       "application/manifest+json")
+        elif path in ("/icon-192.png", "/icon-512.png", "/favicon.ico"):
+            name = path.lstrip("/")
+            if name == "favicon.ico":
+                name = "icon-192.png"
+            self._file(name, "image/png")
         else:
             self._plain(404, "not found")
 

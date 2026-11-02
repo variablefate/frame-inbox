@@ -28,6 +28,8 @@ install -m 755 "$SRC/control.py" "$BASE/control.py"
 install -m 644 "$SRC/icon.svg"   "$BASE/icon.svg"
 install -m 644 "$SRC/VERSION"    "$BASE/VERSION"
 install -m 755 "$SRC/update.sh"  "$BASE/update.sh"
+install -m 644 "$SRC/static/icon-192.png" "$BASE/icon-192.png"
+install -m 644 "$SRC/static/icon-512.png" "$BASE/icon-512.png"
 install -m 755 "$SRC/bin/frame-inbox" "$BIN/frame-inbox"
 install -m 755 "$SRC/bin/sendlink"    "$BIN/sendlink"
 # bake in the interpreter that actually has GTK (escape sed replacement metacharacters)

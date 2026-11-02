@@ -40,7 +40,7 @@ On a Windows PC with [FrameDrop](https://framedropvr.com/) paired to your headse
 
 FrameDrop's client is Windows-only, and its install page has no fallback when opened in the headset's own browser — so a headset-only setup uses the one-liner above instead.
 
-Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `ba880ced0e343e717d1c78cd6babbd0ca955a66c3f469969f3cf62d108da03ef` (also in [`framedrop.json`](framedrop.json)).
+Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `ab509e6bfbcf8ddf62162cd12a36e2b1b2af66e8f568572071a39cc641c63f50` (also in [`framedrop.json`](framedrop.json)).
 
 ### Either way, then
 
@@ -49,6 +49,10 @@ Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should pr
 3. Paste a link, hit **Send to inbox**, tap it on the phone.
 
 Use the IP, not a `.local` name — Android Chrome does not resolve mDNS reliably.
+
+### On the home screen
+
+The page ships a web app manifest, so the shortcut gets a proper icon and name, and on iOS it opens without browser chrome. A true **Install app** prompt needs a secure origin, which `http://<lan-ip>:8765` is not — Chrome's own parser reports `not-from-secure-origin` and falls back to a plain shortcut. Put HTTPS in front of it (for example `tailscale serve`) and the same manifest makes it an installable PWA with no code change.
 
 ## Updating
 
@@ -156,9 +160,17 @@ Layout notes worth knowing before you change things:
 ## Uninstall
 
 ```bash
-rm -rf ~/.local/share/frame-inbox ~/.local/bin/frame-inbox ~/.local/bin/sendlink \
-       ~/.local/share/applications/frame-inbox.desktop ~/Desktop/frame-inbox.desktop
+curl -fsSL https://raw.githubusercontent.com/variablefate/frame-inbox/main/uninstall.sh | bash
 ```
+
+It lists everything it will remove, then asks. It stops a running server and removes the launchers, the menu and desktop entries, the icons, the ntfy topic, and — if you installed through FrameDrop — the sideloaded copy in `~/devkit-game` plus its Steam library entry.
+
+```bash
+./uninstall.sh --dry-run          # list only
+./uninstall.sh --keep-data        # remove the app, keep your links
+```
+
+Removing a Steam entry goes through the devkit tools, so Steam has to be running; if it isn't, the script says so and leaves that one tile for you to remove from the library.
 
 ## License
 
