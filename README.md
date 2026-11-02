@@ -30,6 +30,16 @@ cd frame-inbox
 
 That installs the app into `~/.local/share/frame-inbox/` and the launchers into `~/.local/bin/`. Nothing is installed system-wide and no root is needed.
 
+## Install on a Steam Frame with FrameDrop
+
+[![Install with FrameDrop](docs/framedrop-button.svg)](https://framedropvr.com/install?manifest=https%3A%2F%2Fraw.githubusercontent.com%2Fvariablefate%2Fframe-inbox%2Fmain%2Fframedrop.json)
+
+On a Windows PC with [FrameDrop](https://framedropvr.com/) paired to your headset, that button downloads the ARM64 bundle and adds it to the Steam library. It is the same code as the installer above, just pre-packaged to run from wherever it unpacks.
+
+FrameDrop is Windows-only today, so if the headset is the only machine you have, use `install.sh` on it directly — that path needs nothing but Python and GTK.
+
+Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `c181c303352608d0ed88dcf1ea445f3b2007b1892c161ee5ca8b48ea33f65e36` (also in [`framedrop.json`](framedrop.json)).
+
 Then:
 
 1. Launch **Frame Inbox** (app menu, or the desktop icon if you passed `--desktop-icon`).

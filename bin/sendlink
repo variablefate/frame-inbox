@@ -7,6 +7,7 @@
 #   sendlink --push <url>   also send a phone notification via ntfy.sh
 #   sendlink --topic <name> set the ntfy topic used by --push
 set -euo pipefail
+umask 077
 
 BASE="${FRAME_INBOX_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/frame-inbox}"
 INBOX="$BASE/inbox.jsonl"
@@ -70,6 +71,7 @@ case "${1:-}" in
       name="hframe-$("$PY" -c 'import secrets,string;a=string.ascii_lowercase+string.digits;print("".join(secrets.choice(a) for _ in range(8)))')"
     fi
     mkdir -p "$(dirname "$TOPIC_FILE")"; printf '%s\n' "$name" > "$TOPIC_FILE"
+    chmod 600 "$TOPIC_FILE"
     echo "ntfy topic set: $name"
     echo "one-time on the phone: install the ntfy app, subscribe to topic '$name'"
     echo "then: sendlink --push <url>   (tap the notification to open the link)"

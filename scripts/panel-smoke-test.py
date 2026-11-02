@@ -146,6 +146,35 @@ try:
 except Exception as exc:  # noqa: BLE001
     check(False, f"copy-row page check: {exc}")
 
+print("3c. request hardening")
+import http.client
+
+
+def raw(method, path, body=b"", headers=None):
+    conn = http.client.HTTPConnection("127.0.0.1", int(PORT), timeout=5)
+    conn.request(method, path, body=body, headers=headers or {})
+    resp = conn.getresponse()
+    data = resp.read()
+    hdrs = {k.lower(): v for k, v in resp.getheaders()}
+    conn.close()
+    return resp.status, data, hdrs
+
+
+st, _, _ = raw("POST", "/add", b"https://evil.example/x", {"Origin": "https://evil.example"})
+check(st == 403, "cross-origin POST rejected (CSRF)")
+st, _, _ = raw("POST", "/clear", b"", {"Sec-Fetch-Site": "cross-site"})
+check(st == 403, "Sec-Fetch-Site cross-site rejected")
+st, _, _ = raw("POST", "/add", b"https://evil.example/x", {"Host": "rebind.example:8765"})
+check(st == 403, "foreign Host rejected (DNS rebinding)")
+st, _, hdrs = raw("GET", "/")
+check(hdrs.get("x-frame-options") == "DENY", "clickjacking blocked")
+check("default-src 'none'" in hdrs.get("content-security-policy", ""), "CSP present")
+check(hdrs.get("x-content-type-options") == "nosniff", "nosniff present")
+st, _, _ = raw("POST", "/add", b"https://ok.example/x")
+check(st == 200, "no-Origin writes still work (CLI, panel)")
+mode = oct(os.stat(control.INBOX).st_mode & 0o777)
+check(mode == "0o600", f"store is private (mode {mode})")
+
 print("4. clear needs arming")
 win.on_clear()
 check(win.clear_btn.get_label().startswith("Confirm"), "first click only arms")

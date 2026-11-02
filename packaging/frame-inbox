@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Launcher inside the FrameDrop/sideload bundle: runs from wherever it was unpacked.
+HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+PY="${FRAME_INBOX_PYTHON:-/usr/bin/python3}"
+exec "$PY" "$HERE/control.py" "$@"

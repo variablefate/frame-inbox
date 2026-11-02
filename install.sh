@@ -28,8 +28,9 @@ install -m 755 "$SRC/control.py" "$BASE/control.py"
 install -m 644 "$SRC/icon.svg"   "$BASE/icon.svg"
 install -m 755 "$SRC/bin/frame-inbox" "$BIN/frame-inbox"
 install -m 755 "$SRC/bin/sendlink"    "$BIN/sendlink"
-# bake in the interpreter that actually has GTK
-sed -i "s|/usr/bin/python3|$PY|" "$BIN/frame-inbox"
+# bake in the interpreter that actually has GTK (escape sed replacement metacharacters)
+PY_ESC=$(printf '%s' "$PY" | sed 's/[&#\\]/\\&/g')
+sed -i "s#/usr/bin/python3#$PY_ESC#" "$BIN/frame-inbox"
 say "app        $BASE"
 say "launchers  $BIN/frame-inbox, $BIN/sendlink"
 
@@ -45,7 +46,7 @@ else
   say "icon       skipped (rsvg-convert not found)"
 fi
 
-sed "s|@EXEC@|$BIN/frame-inbox|g" "$SRC/desktop/frame-inbox.desktop.in" > "$APPS/frame-inbox.desktop"
+sed "s|@EXEC@|\"$BIN/frame-inbox\"|g" "$SRC/desktop/frame-inbox.desktop.in" > "$APPS/frame-inbox.desktop"
 chmod +x "$APPS/frame-inbox.desktop"
 say "menu entry $APPS/frame-inbox.desktop"
 

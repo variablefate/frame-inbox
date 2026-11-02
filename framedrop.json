@@ -1,0 +1,10 @@
+{
+  "schema": "framedrop.install/v1",
+  "name": "Frame Inbox",
+  "files": [
+    {
+      "url": "https://github.com/variablefate/frame-inbox/releases/download/v1.0.0/frame-inbox-linux-arm64.zip",
+      "sha256": "c181c303352608d0ed88dcf1ea445f3b2007b1892c161ee5ca8b48ea33f65e36"
+    }
+  ]
+}

@@ -8,6 +8,9 @@ server.pid
 __pycache__/
 *.py[cod]
 
+# build output
+dist/
+
 # editors / os
 .DS_Store
 *.swp

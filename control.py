@@ -22,7 +22,11 @@ from gi.repository import Gdk, GLib, Gtk, Pango
 BASE = (os.environ.get("FRAME_INBOX_HOME")
         or os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
                         "frame-inbox"))
-SERVER = os.path.join(BASE, "server.py")
+# code lives next to this file (so a sideloaded copy works from anywhere);
+# state always lives in the data dir
+CODE_DIR = os.path.dirname(os.path.abspath(__file__))
+SERVER = os.path.join(CODE_DIR, "server.py")
+ICON = os.path.join(CODE_DIR, "icon.svg")
 INBOX = os.environ.get("FRAME_INBOX_PATH") or os.path.join(BASE, "inbox.jsonl")
 LOG = os.path.join(BASE, "server.log")
 PIDFILE = os.environ.get("FRAME_INBOX_PIDFILE") or os.path.join(BASE, "server.pid")
@@ -423,11 +427,18 @@ class Panel(Gtk.Window):
 
 
 def main():
+    os.umask(0o077)
     provider = Gtk.CssProvider()
     provider.load_from_data(CSS)
     Gtk.StyleContext.add_provider_for_screen(
         Gdk.Screen.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-    Gtk.Window.set_default_icon_name("frame-inbox")
+    if os.path.exists(ICON):
+        try:
+            Gtk.Window.set_default_icon_from_file(ICON)
+        except Exception:
+            Gtk.Window.set_default_icon_name("frame-inbox")
+    else:
+        Gtk.Window.set_default_icon_name("frame-inbox")
     win = Panel()
     win.owns_loop = True
     win.show_all()

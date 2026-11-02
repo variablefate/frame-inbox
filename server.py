@@ -8,16 +8,19 @@ Entries older than SENDLINK_KEEP_DAYS (default 7) are dropped on every write.
 """
 import hashlib
 import html
+import ipaddress
 import json
 import os
 import re
 import secrets
 import signal
+import socket
 import sys
 import threading
 import time
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 
 BASE = (os.environ.get("FRAME_INBOX_HOME")
         or os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
@@ -26,6 +29,7 @@ INBOX = os.environ.get("FRAME_INBOX_PATH") or os.path.join(BASE, "inbox.jsonl")
 PIDFILE = os.environ.get("FRAME_INBOX_PIDFILE") or os.path.join(BASE, "server.pid")
 PORT = int(os.environ.get("SENDLINK_PORT", "8765"))
 MAX_ITEMS = 500
+HOSTNAME = socket.gethostname().lower()
 # Entries older than this are dropped whenever something is written (0 = keep forever).
 KEEP_DAYS = float(os.environ.get("SENDLINK_KEEP_DAYS", "7"))
 
@@ -399,6 +403,49 @@ def render(items):
             .replace("__CLEARHIDDEN__", "" if has_rows else "hidden"))
 
 
+def host_is_local(host_header):
+    """Only answer to literals, localhost and this machine's own names.
+
+    Without this a DNS-rebinding page could serve itself from attacker.com,
+    re-point that name at this box, and talk to the API as a same-origin site.
+    """
+    if not host_header:
+        return True
+    host = host_header.strip().lower()
+    if host.startswith("["):
+        host = host[1:].split("]", 1)[0]
+    elif ":" in host:
+        host = host.rsplit(":", 1)[0]
+    try:
+        ipaddress.ip_address(host)
+        return True                     # a bare address cannot be rebound
+    except ValueError:
+        pass
+    return host in ("localhost", HOSTNAME) or host.endswith(".local")
+
+
+SECURITY_HEADERS = {
+    # the page is one inline script and one inline stylesheet, nothing else
+    "Content-Security-Policy": ("default-src 'none'; script-src 'unsafe-inline'; "
+                                "style-src 'unsafe-inline'; img-src data:; "
+                                "connect-src 'self'; base-uri 'none'; "
+                                "form-action 'none'; frame-ancestors 'none'"),
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+
+def harden_permissions():
+    """The store holds the user's links; keep it out of other local accounts."""
+    for path, mode in ((BASE, 0o700), (INBOX, 0o600), (PIDFILE, 0o600)):
+        try:
+            os.chmod(path, mode)
+        except OSError:
+            pass
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "frame-inbox/2"
 
@@ -407,6 +454,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for k, v in SECURITY_HEADERS.items():
+            self.send_header(k, v)
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -416,10 +465,33 @@ class Handler(BaseHTTPRequestHandler):
     def _plain(self, code, text):
         self._send(code, (text + "\n").encode(), "text/plain; charset=utf-8")
 
+    def same_origin(self):
+        """Block CSRF from any page the user happens to visit.
+
+        A no-Origin request is a CLI/panel call and stays allowed; browsers always
+        send Origin on a cross-origin POST, and Sec-Fetch-Site catches the rest.
+        """
+        site = self.headers.get("Sec-Fetch-Site")
+        if site and site not in ("same-origin", "none"):
+            return False
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        if origin == "null":
+            return False
+        try:
+            parts = urlsplit(origin)
+        except ValueError:
+            return False
+        return (parts.scheme in ("http", "https")
+                and parts.netloc.lower() == (self.headers.get("Host") or "").lower())
+
     def do_HEAD(self):
         self.do_GET()
 
     def do_GET(self):
+        if not host_is_local(self.headers.get("Host")):
+            return self._plain(403, "unexpected host")
         path = self.path.split("?", 1)[0].rstrip("/") or "/"
         items = read_all()[::-1][:MAX_ITEMS]
         if path == "/":
@@ -439,6 +511,10 @@ class Handler(BaseHTTPRequestHandler):
             self._plain(404, "not found")
 
     def do_POST(self):
+        if not host_is_local(self.headers.get("Host")):
+            return self._plain(403, "unexpected host")
+        if not self.same_origin():
+            return self._plain(403, "cross-origin writes are not allowed")
         path = self.path.split("?", 1)[0].rstrip("/")
         length = int(self.headers.get("Content-Length") or 0)
         if length > 8192:
@@ -477,7 +553,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    os.umask(0o077)
     os.makedirs(os.path.dirname(INBOX), exist_ok=True)
+    os.makedirs(BASE, exist_ok=True)
+    harden_permissions()
     if "--prune" in sys.argv:
         if KEEP_DAYS and KEEP_DAYS > 0:
             print(f"removed {prune()} entries older than {KEEP_DAYS:g} days")
