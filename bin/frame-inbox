@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Frame Inbox — control panel launcher
+BASE="${FRAME_INBOX_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/frame-inbox}"
+PY="${FRAME_INBOX_PYTHON:-/usr/bin/python3}"
+exec "$PY" "$BASE/control.py" "$@"

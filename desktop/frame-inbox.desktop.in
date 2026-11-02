@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Frame Inbox
+GenericName=Link handoff
+Comment=Start the link page your phone opens, send links to it, clear it
+Exec=@EXEC@
+Icon=frame-inbox
+Terminal=false
+Categories=Network;
+Keywords=link;share;phone;inbox;
+StartupNotify=true
+StartupWMClass=frame-inbox

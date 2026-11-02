@@ -1,0 +1,13 @@
+# runtime state - never commit a real inbox
+inbox.jsonl
+inbox.jsonl.tmp
+server.log
+server.pid
+
+# python
+__pycache__/
+*.py[cod]
+
+# editors / os
+.DS_Store
+*.swp

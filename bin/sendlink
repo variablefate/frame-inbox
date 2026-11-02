@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# sendlink — push a link to the phone without QR codes, apps, or accounts.
+#
+#   sendlink <url> [note]   add to the LAN inbox the phone bookmarks
+#   sendlink -              read the url from stdin
+#   sendlink                show what's in the inbox
+#   sendlink --push <url>   also send a phone notification via ntfy.sh
+#   sendlink --topic <name> set the ntfy topic used by --push
+set -euo pipefail
+
+BASE="${FRAME_INBOX_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/frame-inbox}"
+INBOX="$BASE/inbox.jsonl"
+SERVER="$BASE/server.py"
+TOPIC_FILE="$HOME/.config/sendlink/topic"
+PORT="${SENDLINK_PORT:-8765}"
+KEEP_DAYS="${SENDLINK_KEEP_DAYS:-7}"
+PY=/usr/bin/python3
+
+die() { printf '\033[31m%s\033[0m\n' "$*" >&2; exit 1; }
+
+is_url() { [[ "$1" =~ ^[a-zA-Z][a-zA-Z0-9+.-]*:[^[:space:]]*[^[:space:]]$ ]]; }
+
+add() { # url, note
+  local url="$1" note="${2:-}"
+  mkdir -p "$(dirname "$INBOX")"
+  "$PY" - "$url" "$note" <<'EOF' >> "$INBOX"
+import json, sys, time
+print(json.dumps({"t": time.time(), "url": sys.argv[1], "note": sys.argv[2]}))
+EOF
+}
+
+show() {
+  if [[ ! -s "$INBOX" ]]; then echo "inbox is empty"; return; fi
+  "$PY" - "$INBOX" <<'EOF'
+import json, sys, time
+from datetime import datetime
+rows = [json.loads(l) for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
+for r in rows[::-1][:15]:
+    when = datetime.fromtimestamp(r["t"]).strftime("%d %b %H:%M")
+    note = f'  — {r["note"]}' if r.get("note") else ""
+    print(f'{when}  {r["url"]}{note}')
+EOF
+}
+
+push() { # url
+  local url="$1" topic
+  [[ -f "$TOPIC_FILE" ]] || die "no ntfy topic set: sendlink --topic <name>  (subscribe to it in the ntfy app)"
+  topic="$(< "$TOPIC_FILE")"
+  curl -fsS -m 10 -o /dev/null \
+    -H "Title: Link from the Frame" \
+    -H "Click: $url" \
+    -H "Tags: link" \
+    -d "$url" "https://ntfy.sh/$topic" || die "ntfy push failed"
+}
+
+case "${1:-}" in
+  ""|-h|--help)
+    show; echo
+    echo "usage: sendlink <url> [note] | --push <url> | --topic [name] | --prune | --clear"
+    echo "links are kept for ${KEEP_DAYS} days, then dropped automatically (SENDLINK_KEEP_DAYS=0 keeps forever)"
+    exit 0 ;;
+  --prune)
+    SENDLINK_KEEP_DAYS="$KEEP_DAYS" "$PY" "$SERVER" --prune; exit 0 ;;
+  --clear)
+    count=$([[ -f "$INBOX" ]] && grep -c . "$INBOX" || echo 0)
+    : > "$INBOX"; echo "inbox cleared ($count entries removed)"; exit 0 ;;
+  --topic)
+    name="${2:-}"
+    if [[ -z "$name" ]]; then
+      name="hframe-$("$PY" -c 'import secrets,string;a=string.ascii_lowercase+string.digits;print("".join(secrets.choice(a) for _ in range(8)))')"
+    fi
+    mkdir -p "$(dirname "$TOPIC_FILE")"; printf '%s\n' "$name" > "$TOPIC_FILE"
+    echo "ntfy topic set: $name"
+    echo "one-time on the phone: install the ntfy app, subscribe to topic '$name'"
+    echo "then: sendlink --push <url>   (tap the notification to open the link)"
+    exit 0 ;;
+  --push)
+    [[ -n "${2:-}" ]] || die "usage: sendlink --push <url>"
+    is_url "$2" || die "not an http(s) url: $2"
+    push "$2"; echo "pushed to phone via ntfy"; exit 0 ;;
+  -)
+    url="$(cat)"; note="${2:-}" ;;
+  *)
+    url="$1"; note="${2:-}" ;;
+esac
+
+is_url "$url" || die "not an http(s) url: $url"
+add "$url" "$note"
+SENDLINK_KEEP_DAYS="$KEEP_DAYS" "$PY" "$SERVER" --prune >/dev/null 2>&1 || true
+echo "saved → open http://frame.local:$PORT  on the phone"
