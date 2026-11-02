@@ -107,6 +107,8 @@ print("2. page renders and its inline JS parses")
 try:
     html = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/", timeout=5).read().decode()
     check('<li class="row"' not in html or "button class=\"del\"" in html, "page served")
+    ver = urllib.request.urlopen(f"http://127.0.0.1:{PORT}/version", timeout=5).read().decode().strip()
+    check(ver == control.VERSION, f"/version reports {control.VERSION}")
     script = re.search(r"<script>(.*)</script>", html, re.S).group(1)
     js = os.path.join(TMP, "page.js")
     with open(js, "w", encoding="utf-8") as fh:
