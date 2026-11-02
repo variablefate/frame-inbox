@@ -126,6 +126,11 @@ src="$(find "$tmp/x" -maxdepth 2 -name VERSION -printf '%h\n' | head -1)"
 # ---- swap the code, leave the data alone ------------------------------------
 for f in server.py control.py icon.svg VERSION frame-inbox; do
   [ -f "$src/$f" ] || continue
+  # the bundle carries its own launcher; an install.sh layout keeps its launcher
+  # in ~/.local/bin and should not grow a second one here
+  if [ "$f" = "frame-inbox" ] && [ ! -f "$DIR/frame-inbox" ]; then
+    continue
+  fi
   install -m "$(stat -c %a "$src/$f")" "$src/$f" "$DIR/.$f.new"
   mv -f "$DIR/.$f.new" "$DIR/$f"
   echo "  updated $f"
