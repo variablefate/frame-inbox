@@ -22,27 +22,29 @@ The page is deliberately small: a list, a per-row delete, and a confirm-guarded 
 
 ## Install
 
+### On the headset itself
+
+No Windows PC needed — the Frame is a PC, it just isn't a Windows one. Desktop Mode → Konsole → paste this line (the copy button appears on hover):
+
 ```bash
-git clone https://github.com/variablefate/frame-inbox.git
-cd frame-inbox
-./install.sh                 # add --desktop-icon to also drop a launcher on the desktop
+git clone https://github.com/variablefate/frame-inbox && cd frame-inbox && ./install.sh --desktop-icon
 ```
 
-That installs the app into `~/.local/share/frame-inbox/` and the launchers into `~/.local/bin/`. Nothing is installed system-wide and no root is needed.
+That puts the app in `~/.local/share/frame-inbox/`, the launchers in `~/.local/bin/`, and an icon on the desktop. Nothing is installed system-wide, no root is needed, and `git` ships with SteamOS.
 
-## Install on a Steam Frame with FrameDrop
+### From a Windows PC with FrameDrop
 
 [![Install with FrameDrop](docs/framedrop-button.svg)](https://framedropvr.com/install?manifest=https%3A%2F%2Fraw.githubusercontent.com%2Fvariablefate%2Fframe-inbox%2Fmain%2Fframedrop.json)
 
 On a Windows PC with [FrameDrop](https://framedropvr.com/) paired to your headset, that button downloads the ARM64 bundle and adds it to the Steam library. It is the same code as the installer above, just pre-packaged to run from wherever it unpacks.
 
-FrameDrop is Windows-only today, so if the headset is the only machine you have, use `install.sh` on it directly — that path needs nothing but Python and GTK.
+FrameDrop's client is Windows-only, and its install page has no fallback when opened in the headset's own browser — so a headset-only setup uses the one-liner above instead.
 
 Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `c181c303352608d0ed88dcf1ea445f3b2007b1892c161ee5ca8b48ea33f65e36` (also in [`framedrop.json`](framedrop.json)).
 
-Then:
+### Either way, then
 
-1. Launch **Frame Inbox** (app menu, or the desktop icon if you passed `--desktop-icon`).
+1. Launch **Frame Inbox** (app menu, desktop icon, or the Steam library if FrameDrop installed it).
 2. On the phone, open `http://<your-lan-ip>:8765` and *Add to Home screen*.
 3. Paste a link, hit **Send to inbox**, tap it on the phone.
 
