@@ -3,8 +3,8 @@
   "name": "Frame Inbox",
   "files": [
     {
-      "url": "https://github.com/variablefate/frame-inbox/releases/download/v1.1.0/frame-inbox-linux-arm64.zip",
-      "sha256": "b4abb9c466816b9b8f48651506ec20abab22d6022696fccb364fb1a684746c77"
+      "url": "https://github.com/variablefate/frame-inbox/releases/download/v1.2.0/frame-inbox-linux-arm64.zip",
+      "sha256": "ba880ced0e343e717d1c78cd6babbd0ca955a66c3f469969f3cf62d108da03ef"
     }
   ]
 }

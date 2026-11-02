@@ -40,7 +40,7 @@ On a Windows PC with [FrameDrop](https://framedropvr.com/) paired to your headse
 
 FrameDrop's client is Windows-only, and its install page has no fallback when opened in the headset's own browser — so a headset-only setup uses the one-liner above instead.
 
-Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `b4abb9c466816b9b8f48651506ec20abab22d6022696fccb364fb1a684746c77` (also in [`framedrop.json`](framedrop.json)).
+Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `ba880ced0e343e717d1c78cd6babbd0ca955a66c3f469969f3cf62d108da03ef` (also in [`framedrop.json`](framedrop.json)).
 
 ### Either way, then
 
@@ -52,7 +52,9 @@ Use the IP, not a `.local` name — Android Chrome does not resolve mDNS reliabl
 
 ## Updating
 
-One line, whichever way it was installed:
+Click **Check for updates** in the panel. If there is a newer release the button becomes **Update to vX**, then **Restart to apply** — that stops the server and re-execs the panel on the new code.
+
+From a terminal, or on a headless install, the same updater as a one-liner:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/variablefate/frame-inbox/main/update.sh | bash
@@ -80,6 +82,7 @@ It finds the install itself, including a FrameDrop sideload under `~/devkit-game
 | × on a row | Deletes that link, with a 6 s undo toast |
 | A `magnet:` / `mailto:` / other-scheme row | Tapping copies the text instead of navigating (the page runs on plain HTTP, so it falls back to `execCommand` — `navigator.clipboard` does not exist there) |
 | Quit | Stops the server, then exits |
+| Check for updates | Asks GitHub for the latest release; if there is one it becomes **Update to vX**, then **Restart to apply** |
 
 Closing the window minimizes it to the taskbar while the page keeps serving. There is no tray icon: this image ships no AppIndicator bindings, and a package install would not survive SteamOS atomic updates — the taskbar entry is the equivalent.
 

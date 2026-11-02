@@ -18,6 +18,7 @@ FILES = [
     ("control.py", 0o644),
     ("icon.svg", 0o644),
     ("VERSION", 0o644),
+    ("update.sh", 0o755),
     ("packaging/frame-inbox", 0o755),
     ("packaging/README.txt", 0o644),
 ]

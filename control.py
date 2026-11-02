@@ -27,6 +27,7 @@ BASE = (os.environ.get("FRAME_INBOX_HOME")
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER = os.path.join(CODE_DIR, "server.py")
 ICON = os.path.join(CODE_DIR, "icon.svg")
+UPDATE_SH = os.environ.get("FRAME_INBOX_UPDATER") or os.path.join(CODE_DIR, "update.sh")
 
 
 def _read_version():
@@ -68,6 +69,7 @@ entry { background-image: none; background-color: #1a1e26; border: 1px solid #2a
         border-radius: 10px; padding: 9px 11px; color: #e8eaf0; caret-color: #6ea8fe; }
 entry:focus { border-color: #3d5a80; }
 .dim { font-size: 11px; color: #5f6779; }
+button.tiny { font-size: 11px; padding: 4px 9px; border-radius: 8px; }
 .error { font-size: 12px; color: #ff9aa8; }
 separator { background-color: #232935; min-height: 1px; }
 """
@@ -103,6 +105,11 @@ class Panel(Gtk.Window):
         self.arm_timer = None
         self.msg_timer = None
         self.owns_loop = False   # True only when main() started Gtk.main()
+        self.update_state = "idle"      # idle | checking | offered | updating | done
+        self.update_version = None
+        self.update_gen = 0
+        self.update_proc = None
+        self.update_deadline = 0.0
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         box.set_border_width(16)
@@ -179,7 +186,18 @@ class Panel(Gtk.Window):
 
         self.footer = Gtk.Label(label="", xalign=0.0)
         self.footer.get_style_context().add_class("dim")
-        box.pack_start(self.footer, False, False, 0)
+        footer_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.update_btn = Gtk.Button(label="Check for updates")
+        self.update_btn.get_style_context().add_class("quiet")
+        self.update_btn.get_style_context().add_class("tiny")
+        self.update_btn.set_tooltip_text("Asks GitHub for the latest release")
+        self.update_btn.connect("clicked", self.on_update)
+        if not os.path.exists(UPDATE_SH):
+            self.update_btn.set_sensitive(False)
+            self.update_btn.set_tooltip_text(f"No updater found at {UPDATE_SH}")
+        footer_row.pack_start(self.footer, True, True, 0)
+        footer_row.pack_end(self.update_btn, False, False, 0)
+        box.pack_start(footer_row, False, False, 0)
 
         self.connect("destroy", lambda *_: Gtk.main_quit())
         GLib.timeout_add_seconds(2, self.tick)
@@ -413,6 +431,121 @@ class Panel(Gtk.Window):
     def disarm_and_false(self):
         self.disarm()
         return False
+
+    # --- updates ---------------------------------------------------------
+    def on_update(self, *_):
+        if self.update_state == "idle":
+            self.check_update()
+        elif self.update_state == "offered":
+            self.apply_update()
+        elif self.update_state == "done":
+            self.restart_app()
+
+    def reset_update(self, message=None, error=False):
+        self.update_state = "idle"
+        self.update_version = None
+        self.update_btn.set_sensitive(True)
+        self.update_btn.set_label("Check for updates")
+        self.update_btn.get_style_context().remove_class("go")
+        if message:
+            self.flash(message, error=error)
+
+    def check_update(self):
+        if not os.path.exists(UPDATE_SH):
+            self.flash("Updater not installed", error=True)
+            return
+        self.update_state = "checking"
+        self.update_btn.set_sensitive(False)
+        self.update_btn.set_label("Checking…")
+        self.flash("Checking for updates…")
+        self.update_gen += 1
+        gen = self.update_gen
+        try:
+            self.update_proc = subprocess.Popen(
+                ["bash", UPDATE_SH, "--check"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        except OSError as exc:
+            self.reset_update(f"Could not run the updater: {exc}", error=True)
+            return
+        self.update_deadline = time.time() + 45
+        GLib.timeout_add(250, self.poll_check, gen)
+
+    def poll_check(self, gen):
+        if gen != self.update_gen:
+            return False
+        if self.update_proc.poll() is None:
+            if time.time() > self.update_deadline:
+                self.update_proc.kill()
+                self.reset_update("Update check timed out", error=True)
+                return False
+            GLib.timeout_add(250, self.poll_check, gen)
+            return False
+        out = self.update_proc.stdout.read() or ""
+        match = re.search(r"update available:.*?->\s*v?([0-9][^\s]*)", out)
+        if match:
+            self.update_version = match.group(1)
+            self.update_state = "offered"
+            self.update_btn.set_sensitive(True)
+            self.update_btn.set_label(f"Update to v{self.update_version}")
+            self.update_btn.get_style_context().add_class("go")
+            self.flash(f"v{self.update_version} is available")
+        elif "already up to date" in out:
+            self.reset_update(f"Up to date (v{VERSION})")
+        else:
+            self.reset_update("Could not check for updates", error=True)
+        return False
+
+    def apply_update(self):
+        self.update_state = "updating"
+        self.update_btn.set_sensitive(False)
+        self.update_btn.set_label("Updating…")
+        self.flash("Downloading and verifying…")
+        self.update_gen += 1
+        gen = self.update_gen
+        try:
+            self.update_proc = subprocess.Popen(
+                ["bash", UPDATE_SH],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        except OSError as exc:
+            self.reset_update(f"Could not run the updater: {exc}", error=True)
+            return
+        self.update_deadline = time.time() + 300
+        GLib.timeout_add(400, self.poll_apply, gen)
+
+    def poll_apply(self, gen):
+        if gen != self.update_gen:
+            return False
+        if self.update_proc.poll() is None:
+            if time.time() > self.update_deadline:
+                self.update_proc.kill()
+                self.reset_update("Update timed out", error=True)
+                return False
+            GLib.timeout_add(400, self.poll_apply, gen)
+            return False
+        out = (self.update_proc.stdout.read() or "").strip()
+        last = out.splitlines()[-1] if out else "no output"
+        if self.update_proc.returncode != 0:
+            self.reset_update(f"Update failed: {last}", error=True)
+            return False
+        self.update_state = "done"
+        self.update_btn.set_sensitive(True)
+        self.update_btn.set_label("Restart to apply")
+        self.flash(f"Updated to v{self.update_version or 'latest'} — restart")
+        return False
+
+    def restart_app(self):
+        """Stop the server and re-exec the panel so the new code takes over."""
+        try:
+            if self.health(0.3) or self.alive():
+                self.post("/shutdown", timeout=1)
+                if self.proc:
+                    try:
+                        self.proc.wait(timeout=3)
+                    except Exception:
+                        self.proc.kill()
+        except Exception:
+            pass
+        os.execv(sys.executable, [sys.executable, os.path.join(CODE_DIR, "control.py")])
 
     def on_delete(self, *_):
         # closing the window parks it in the taskbar; the page keeps serving
