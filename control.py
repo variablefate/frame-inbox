@@ -27,6 +27,17 @@ BASE = (os.environ.get("FRAME_INBOX_HOME")
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER = os.path.join(CODE_DIR, "server.py")
 ICON = os.path.join(CODE_DIR, "icon.svg")
+
+
+def _read_version():
+    try:
+        with open(os.path.join(CODE_DIR, "VERSION"), encoding="utf-8") as fh:
+            return fh.read().strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+VERSION = _read_version()
 INBOX = os.environ.get("FRAME_INBOX_PATH") or os.path.join(BASE, "inbox.jsonl")
 LOG = os.path.join(BASE, "server.log")
 PIDFILE = os.environ.get("FRAME_INBOX_PIDFILE") or os.path.join(BASE, "server.pid")
@@ -230,7 +241,8 @@ class Panel(Gtk.Window):
 
     def refresh(self):
         n = self.count()
-        self.footer.set_text(f"{n} link{'s' if n != 1 else ''} on the page · kept {KEEP_DAYS} days")
+        self.footer.set_text(f"v{VERSION} · {n} link{'s' if n != 1 else ''} on the page "
+                             f"· kept {KEEP_DAYS} days")
         self.clear_btn.set_sensitive(n > 0)
 
     def tick(self):

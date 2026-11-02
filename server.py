@@ -30,6 +30,18 @@ PIDFILE = os.environ.get("FRAME_INBOX_PIDFILE") or os.path.join(BASE, "server.pi
 PORT = int(os.environ.get("SENDLINK_PORT", "8765"))
 MAX_ITEMS = 500
 HOSTNAME = socket.gethostname().lower()
+
+
+def _read_version():
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "VERSION"),
+                  encoding="utf-8") as fh:
+            return fh.read().strip() or "unknown"
+    except OSError:
+        return "unknown"
+
+
+VERSION = _read_version()
 # Entries older than this are dropped whenever something is written (0 = keep forever).
 KEEP_DAYS = float(os.environ.get("SENDLINK_KEEP_DAYS", "7"))
 
@@ -507,6 +519,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._plain(404, "inbox is empty")
         elif path == "/health":
             self._plain(200, "ok")
+        elif path == "/version":
+            self._plain(200, VERSION)
         else:
             self._plain(404, "not found")
 

@@ -40,7 +40,7 @@ On a Windows PC with [FrameDrop](https://framedropvr.com/) paired to your headse
 
 FrameDrop's client is Windows-only, and its install page has no fallback when opened in the headset's own browser — so a headset-only setup uses the one-liner above instead.
 
-Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `c181c303352608d0ed88dcf1ea445f3b2007b1892c161ee5ca8b48ea33f65e36` (also in [`framedrop.json`](framedrop.json)).
+Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should print `b4abb9c466816b9b8f48651506ec20abab22d6022696fccb364fb1a684746c77` (also in [`framedrop.json`](framedrop.json)).
 
 ### Either way, then
 
@@ -49,6 +49,24 @@ Verifying the sideload bundle: `sha256sum frame-inbox-linux-arm64.zip` should pr
 3. Paste a link, hit **Send to inbox**, tap it on the phone.
 
 Use the IP, not a `.local` name — Android Chrome does not resolve mDNS reliably.
+
+## Updating
+
+One line, whichever way it was installed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/variablefate/frame-inbox/main/update.sh | bash
+```
+
+It asks GitHub for the latest release, downloads it, checks the pinned sha256, and swaps only the app files — your links, notes, log and retention window are untouched. Then quit and reopen Frame Inbox: the running copy keeps the old code until you do.
+
+See what it would do without changing anything:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/variablefate/frame-inbox/main/update.sh | bash -s -- --check
+```
+
+It finds the install itself, including a FrameDrop sideload under `~/devkit-game/`; pass `--dir <path>` if there is more than one.
 
 ## Using the panel
 
@@ -97,6 +115,7 @@ sendlink --clear                                   # empty the inbox
 | `GET /raw` | Plain text, newest first |
 | `GET /latest` | 302 to the newest entry |
 | `GET /health` | `ok` |
+| `GET /version` | The installed version |
 | `POST /add` | Body: `url` or `url\nnote` |
 | `POST /delete` | Body: entry id |
 | `POST /clear` | Wipes everything, returns the count |
@@ -121,6 +140,15 @@ Layout notes worth knowing before you change things:
 - The page template is assembled with `.replace()` markers, never `str.format()` — every CSS/JS brace would otherwise need doubling.
 - Any backslash that must reach JavaScript has to be written `\\n` in the Python source; a live newline silently kills the whole `<script>` block.
 - Start/stop pollers carry a generation counter. Without it, a stop-poller left over from the previous stop kills the server you just restarted.
+
+### Releasing
+
+1. Bump `VERSION`.
+2. `python3 packaging/build-release.py` — it prints the sha256 of the new bundle.
+3. Put that sha256 and the new tag into `framedrop.json`.
+4. Commit, then `git tag vX.Y.Z && git push --tags` and `gh release create vX.Y.Z dist/frame-inbox-linux-arm64.zip`.
+
+`update.sh` compares the installed `VERSION` against the **latest release tag**, so a release that forgets to bump `VERSION` will never be offered as an update — and a `framedrop.json` left pointing at the old tag makes `update.sh` warn instead of verifying.
 
 ## Uninstall
 
